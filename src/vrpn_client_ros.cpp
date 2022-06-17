@@ -167,12 +167,16 @@ namespace vrpn_client_ros
     {
       tracker->pose_msg_.header.stamp.sec = tracker_pose.msg_time.tv_sec;
       tracker->pose_msg_.header.stamp.nanosec = tracker_pose.msg_time.tv_usec * 1000;
+      tracker->ned_msg_.header.stamp.sec = tracker_pose.msg_time.tv_sec;
+      tracker->ned_msg_.header.stamp.nanosec = tracker_pose.msg_time.tv_usec * 1000;
     }
     else
     {
       tracker->pose_msg_.header.stamp = nh->now();
+      tracker->ned_msg_.header.stamp = nh->now();
     }
 
+    // Standard Optitrack Y-up 
     tracker->pose_msg_.pose.position.x = tracker_pose.pos[0];
     tracker->pose_msg_.pose.position.y = tracker_pose.pos[1];
     tracker->pose_msg_.pose.position.z = tracker_pose.pos[2];
@@ -182,7 +186,18 @@ namespace vrpn_client_ros
     tracker->pose_msg_.pose.orientation.z = tracker_pose.quat[2];
     tracker->pose_msg_.pose.orientation.w = tracker_pose.quat[3];
 
+    // NED Frame 
+    tracker->ned_msg_.pose.position.x = tracker_pose.pos[0];
+    tracker->ned_msg_.pose.position.y = tracker_pose.pos[2];
+    tracker->ned_msg_.pose.position.z = -tracker_pose.pos[1];
+
+    tracker->ned_msg_.pose.orientation.x = tracker_pose.quat[0];
+    tracker->ned_msg_.pose.orientation.y = tracker_pose.quat[2];
+    tracker->ned_msg_.pose.orientation.z = -tracker_pose.quat[1];
+    tracker->ned_msg_.pose.orientation.w = tracker_pose.quat[3];
+
     tracker->pose_pub_->publish(tracker->pose_msg_);
+    tracker->ned_pub_->publish(tracker->ned_msg_);
     
 
     // if (tracker->broadcast_tf_)
