@@ -166,7 +166,7 @@ namespace vrpn_client_ros
     {
       pose_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
       ned_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
-      enu_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
+      enu_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_enu", 1);
     }
 
     if (use_server_time_)
@@ -210,14 +210,14 @@ namespace vrpn_client_ros
     ned_msg_.pose.orientation.w = tracker_pose.quat[3];
 
     // ENU Frame 
-    ned_msg_.pose.position.x = tracker_pose.pos[2];
-    ned_msg_.pose.position.y = tracker_pose.pos[0];
-    ned_msg_.pose.position.z = tracker_pose.pos[1];
+    enu_msg_.pose.position.x = tracker_pose.pos[2];
+    enu_msg_.pose.position.y = tracker_pose.pos[0];
+    enu_msg_.pose.position.z = tracker_pose.pos[1];
 
-    ned_msg_.pose.orientation.x = tracker_pose.quat[2];
-    ned_msg_.pose.orientation.y = tracker_pose.quat[0];
-    ned_msg_.pose.orientation.z = -tracker_pose.quat[1];
-    ned_msg_.pose.orientation.w = tracker_pose.quat[3];
+    enu_msg_.pose.orientation.x = tracker_pose.quat[2];
+    enu_msg_.pose.orientation.y = tracker_pose.quat[0];
+    enu_msg_.pose.orientation.z = -tracker_pose.quat[1];
+    enu_msg_.pose.orientation.w = tracker_pose.quat[3];
 
     pose_pub_->publish(pose_msg_);
     ned_pub_->publish(ned_msg_);

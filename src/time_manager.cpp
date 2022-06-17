@@ -19,17 +19,20 @@ rclcpp::Time TimeManager::resolve_timestamp(const timeval& stamp, rclcpp::Node::
   }
   else
   {
-    double offset = (nh->now() - mocap_to_ros_time(stamp)).seconds();
+    double offset_ns = nh->now().nanoseconds() - (stamp.tv_sec*pow(10, 9) + stamp.tv_usec*1000);
 
-    if (count_ == 0 || offset < min_offset_)
+    if (count_ == 0 || offset_ns < min_offset_)
     {
-      min_offset_ = offset;
+      min_offset_ = offset_ns;
     }
+
     count_++;
 
     if (count_ == num_samples_)
     {
+      RCLCPP_INFO_STREAM(nh->get_logger(), "Offset between Optitrack and ROS clocks: " << min_offset_);
       offset_ = rclcpp::Duration(min_offset_);
+      count_++;
     }
 
     return nh->now();
