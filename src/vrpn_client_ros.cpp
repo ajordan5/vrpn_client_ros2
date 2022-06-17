@@ -161,6 +161,7 @@ namespace vrpn_client_ros
     if (!tracker->pose_pub_)
     {
       tracker->pose_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
+      tracker->ned_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
     }
 
     if (tracker->use_server_time_)
