@@ -33,6 +33,7 @@
 #define VRPN_CLIENT_ROS_VRPN_CLIENT_ROS_H
 
 #include "vrpn_client_ros/vrpn_client_ros.h"
+#include "vrpn_client_ros/time_manager.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/logging.hpp"
@@ -81,6 +82,7 @@ namespace vrpn_client_ros
     TrackerRemotePtr tracker_remote_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ned_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr enu_pub_;
     //std::vector<ros::Publisher> pose_pubs_, twist_pubs_, accel_pubs_;
     rclcpp::Node::SharedPtr output_nh_;
     bool use_server_time_, broadcast_tf_, mainloop_executed_;
@@ -88,14 +90,22 @@ namespace vrpn_client_ros
 
     rclcpp::TimerBase::SharedPtr mainloop_timer;
 
+    /**
+     * Estimates time offset between motion capture computer and ros time to output an estimate of the pose capture time relative to ros clock
+     */
+    TimeManager time_manager_;
+
     geometry_msgs::msg::PoseStamped pose_msg_;
     geometry_msgs::msg::PoseStamped ned_msg_;
+    geometry_msgs::msg::PoseStamped enu_msg_;
     // geometry_msgs::TwistStamped twist_msg_;
     // geometry_msgs::AccelStamped accel_msg_;
     // geometry_msgs::TransformStamped transform_stamped_;
 
     void init(std::string tracker_name, rclcpp::Node::SharedPtr nh, bool create_mainloop_timer);
 
+    void position_callback(const vrpn_TRACKERCB& tracker_pose);
+    
     static void VRPN_CALLBACK handle_pose(void *userData, const vrpn_TRACKERCB tracker_pose);
 
     static void VRPN_CALLBACK handle_twist(void *userData, const vrpn_TRACKERVELCB tracker_twist);

@@ -41,7 +41,8 @@ endif()
 include_directories(include)
 
 add_library(vrpn_client_ros
-            src/vrpn_client_ros.cpp)
+            src/vrpn_client_ros.cpp
+            src/time_manager.cpp)
 ament_target_dependencies(vrpn_client_ros rclcpp std_msgs geometry_msgs VRPN)
 
 add_executable(vrpn_tracker_node src/vrpn_tracker_node.cpp)

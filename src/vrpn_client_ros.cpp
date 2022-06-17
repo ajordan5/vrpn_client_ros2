@@ -145,60 +145,83 @@ namespace vrpn_client_ros
 
   void VRPN_CALLBACK VrpnTrackerRos::handle_pose(void *userData, const vrpn_TRACKERCB tracker_pose)
   {
-    VrpnTrackerRos *tracker = static_cast<VrpnTrackerRos *>(userData);
+    VrpnTrackerRos *tracker = reinterpret_cast<VrpnTrackerRos *>(userData);
+    tracker->position_callback(tracker_pose);
+  }
 
-    if(tracker->mainloop_executed_) {
+  void VrpnTrackerRos::position_callback(const vrpn_TRACKERCB& tracker_pose)
+  {
+    if(mainloop_executed_) {
         RCLCPP_WARN_ONCE(
-            tracker->output_nh_->get_logger(), 
+            output_nh_->get_logger(), 
             "VRPN update executed multiple times for single mainloop run. Try to adjust your VRPN server settings."
         );
         return;
     }
-    tracker->mainloop_executed_ = true;
+    mainloop_executed_ = true;
 
-    rclcpp::Node::SharedPtr nh = tracker->output_nh_;
+    rclcpp::Node::SharedPtr nh = output_nh_;
     
-    if (!tracker->pose_pub_)
+    if (!pose_pub_)
     {
-      tracker->pose_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
-      tracker->ned_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
+      pose_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 1);
+      ned_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
+      enu_pub_ = nh->create_publisher<geometry_msgs::msg::PoseStamped>("pose_ned", 1);
     }
 
-    if (tracker->use_server_time_)
+    if (use_server_time_)
     {
-      tracker->pose_msg_.header.stamp.sec = tracker_pose.msg_time.tv_sec;
-      tracker->pose_msg_.header.stamp.nanosec = tracker_pose.msg_time.tv_usec * 1000;
-      tracker->ned_msg_.header.stamp.sec = tracker_pose.msg_time.tv_sec;
-      tracker->ned_msg_.header.stamp.nanosec = tracker_pose.msg_time.tv_usec * 1000;
+      auto mocap_time_sec = tracker_pose.msg_time.tv_sec;
+      auto mocap_time_nsec = tracker_pose.msg_time.tv_usec * 1000;
+      pose_msg_.header.stamp.sec = mocap_time_sec;
+      pose_msg_.header.stamp.nanosec = mocap_time_nsec;
+      ned_msg_.header.stamp.sec = mocap_time_sec;
+      ned_msg_.header.stamp.nanosec = mocap_time_nsec;
+      enu_msg_.header.stamp.sec = mocap_time_sec;
+      enu_msg_.header.stamp.nanosec = mocap_time_nsec;
     }
     else
     {
-      tracker->pose_msg_.header.stamp = nh->now();
-      tracker->ned_msg_.header.stamp = nh->now();
+      // auto ros_time = nh->now();
+      auto ros_time = time_manager_.resolve_timestamp(tracker_pose.msg_time, nh);
+      pose_msg_.header.stamp = ros_time;
+      ned_msg_.header.stamp = ros_time;
+      enu_msg_.header.stamp = ros_time;
     }
 
-    // Standard Optitrack Y-up 
-    tracker->pose_msg_.pose.position.x = tracker_pose.pos[0];
-    tracker->pose_msg_.pose.position.y = tracker_pose.pos[1];
-    tracker->pose_msg_.pose.position.z = tracker_pose.pos[2];
+    // Standard mocap Y-up 
+    pose_msg_.pose.position.x = tracker_pose.pos[0];
+    pose_msg_.pose.position.y = tracker_pose.pos[1];
+    pose_msg_.pose.position.z = tracker_pose.pos[2];
 
-    tracker->pose_msg_.pose.orientation.x = tracker_pose.quat[0];
-    tracker->pose_msg_.pose.orientation.y = tracker_pose.quat[1];
-    tracker->pose_msg_.pose.orientation.z = tracker_pose.quat[2];
-    tracker->pose_msg_.pose.orientation.w = tracker_pose.quat[3];
+    pose_msg_.pose.orientation.x = tracker_pose.quat[0];
+    pose_msg_.pose.orientation.y = tracker_pose.quat[1];
+    pose_msg_.pose.orientation.z = tracker_pose.quat[2];
+    pose_msg_.pose.orientation.w = tracker_pose.quat[3];
 
     // NED Frame 
-    tracker->ned_msg_.pose.position.x = tracker_pose.pos[0];
-    tracker->ned_msg_.pose.position.y = tracker_pose.pos[2];
-    tracker->ned_msg_.pose.position.z = -tracker_pose.pos[1];
+    ned_msg_.pose.position.x = tracker_pose.pos[0];
+    ned_msg_.pose.position.y = tracker_pose.pos[2];
+    ned_msg_.pose.position.z = -tracker_pose.pos[1];
 
-    tracker->ned_msg_.pose.orientation.x = tracker_pose.quat[0];
-    tracker->ned_msg_.pose.orientation.y = tracker_pose.quat[2];
-    tracker->ned_msg_.pose.orientation.z = -tracker_pose.quat[1];
-    tracker->ned_msg_.pose.orientation.w = tracker_pose.quat[3];
+    ned_msg_.pose.orientation.x = tracker_pose.quat[0];
+    ned_msg_.pose.orientation.y = tracker_pose.quat[2];
+    ned_msg_.pose.orientation.z = -tracker_pose.quat[1];
+    ned_msg_.pose.orientation.w = tracker_pose.quat[3];
 
-    tracker->pose_pub_->publish(tracker->pose_msg_);
-    tracker->ned_pub_->publish(tracker->ned_msg_);
+    // ENU Frame 
+    ned_msg_.pose.position.x = tracker_pose.pos[2];
+    ned_msg_.pose.position.y = tracker_pose.pos[0];
+    ned_msg_.pose.position.z = tracker_pose.pos[1];
+
+    ned_msg_.pose.orientation.x = tracker_pose.quat[2];
+    ned_msg_.pose.orientation.y = tracker_pose.quat[0];
+    ned_msg_.pose.orientation.z = -tracker_pose.quat[1];
+    ned_msg_.pose.orientation.w = tracker_pose.quat[3];
+
+    pose_pub_->publish(pose_msg_);
+    ned_pub_->publish(ned_msg_);
+    enu_pub_->publish(enu_msg_);
     
 
     // if (tracker->broadcast_tf_)
@@ -356,12 +379,12 @@ namespace vrpn_client_ros
     nh->declare_parameter("update_frequency", 100.0);
     nh->declare_parameter("frame_id", "world");
     nh->declare_parameter("use_server_time", false);
+    nh->declare_parameter("num_samples", 100);
     //nh->declare_parameter("broadcast_tf", true);
     nh->declare_parameter("refresh_tracker_frequency", 1.0);
 
     std::vector<std::string> param_tracker_names;
     nh->declare_parameter("trackers", param_tracker_names);
-
 
     host_ = getHostStringFromParams(private_nh);
 
@@ -396,7 +419,7 @@ namespace vrpn_client_ros
   }
 
   std::string VrpnClientRos::getHostStringFromParams(rclcpp::Node::SharedPtr host_nh)
-  {
+  {    
     std::stringstream host_stream;
     std::string server;
     int port;

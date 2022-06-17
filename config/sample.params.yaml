@@ -6,3 +6,4 @@ vrpn_client_node:
     use_server_time: false
     refresh_tracker_frequency: 0.2
     update_frequency: 100.0
+    num_samples: 100 # TODO: Not currently used, just hardcoded.
