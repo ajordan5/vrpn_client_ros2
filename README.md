@@ -38,3 +38,9 @@ This will likely change in the future as ROS2 is still under development. See [t
 
 I only use pose in my project, so I did not port anything else (TF, twist, accel). Also multiple sensors per tracker are not ported.
 If there is anyone who would like to use the other features and is willing to test them, I'd be happy to help.
+
+## Troubleshooting
+
+### The vrpn_client_ros node is not publishing any data
+
+Check that the server IP address in sample.params.yaml matches with mocap. In Motive, this IP address can be found by going to View->Data Streaming Pane ("Local Interface" field).
